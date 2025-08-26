@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Universal Copy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        padding: 12px;
+        min-width: 320px;
+        max-width: 420px;
+      }
+      h1 { font-size: 16px; margin: 0 0 8px; }
+      .row { display: flex; gap: 8px; margin-bottom: 8px; }
+      input[type="text"] { flex: 1; padding: 8px; }
+      button { padding: 8px 10px; cursor: pointer; }
+      ul { list-style: none; padding: 0; margin: 8px 0; max-height: 120px; overflow: auto; }
+      li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px solid #8885; border-radius: 6px; margin-bottom: 6px; }
+      .results { margin-top: 12px; max-height: 220px; overflow: auto; border-top: 1px solid #8885; padding-top: 8px; }
+      .result-item { border: 1px dashed #8885; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; }
+      .muted { opacity: 0.8; font-size: 12px; }
+      .actions { display: flex; gap: 8px; }
+      .small { font-size: 12px; padding: 6px 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Universal Copy</h1>
+
+    <div class="row">
+      <input id="selector-input" type="text" placeholder="Enter CSS selector e.g. article h1" />
+      <button id="add-selector">Add</button>
+    </div>
+
+    <ul id="selector-list"></ul>
+
+    <div class="row">
+      <button id="scan">Scan Current Page</button>
+      <button id="copy-all" class="small">Copy All</button>
+    </div>
+
+    <div class="results" id="results"></div>
+
+    <p class="muted">Tips: Use precise selectors. Examples: <code>h1</code>, <code>article .title</code>, <code>meta[name=description]</code>.</p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
