@@ -21,6 +21,7 @@ class MockLescoProvider : BillProvider {
 
 fun defaultRegistry(): ProviderRegistry = ProviderRegistry(
     providers = listOf(
+        GepcoProvider(),
         MockLescoProvider()
     )
 )

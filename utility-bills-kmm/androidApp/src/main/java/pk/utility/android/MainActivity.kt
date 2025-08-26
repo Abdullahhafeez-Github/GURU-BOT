@@ -74,7 +74,7 @@ fun MainScreen() {
     val repo = remember { BillRepository(registry) }
     var ref by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(BillType.Electricity) }
-    var company by remember { mutableStateOf("LESCO") }
+    var company by remember { mutableStateOf("GEPCO") }
     var result by remember { mutableStateOf("") }
     val favorites = remember { FavoritesService() }
     var showSaved by remember { mutableStateOf(false) }
@@ -87,23 +87,32 @@ fun MainScreen() {
                 Button(onClick = { type = BillType.Gas }) { Text("Gas") }
             }
             OutlinedTextField(value = company, onValueChange = { company = it }, label = { Text("Company (e.g., LESCO)") }, modifier = Modifier.fillMaxWidth())
+            val scope = rememberCoroutineScope()
             Button(onClick = {
-                result = "Loading..."
-                // Launch a coroutine to fetch mock bill
-                androidx.compose.runtime.LaunchedEffect(ref + company + type.name) {
-                    val bill = repo.getBill(BillRequest(type, company, ref))
-                    result = "${bill.customerName}\n${bill.amount}\n${bill.dueDate}\n${bill.billingMonth}"
-                    lastBillLines = listOf(
-                        "Customer: ${bill.customerName}",
-                        "Amount: ${bill.amount}",
-                        "Due: ${bill.dueDate}",
-                        "Month: ${bill.billingMonth}",
-                        "Company: $company",
-                        "Type: ${type.name}",
-                        "Ref: $ref"
-                    )
+                scope.launch {
+                    result = "Loading..."
+                    try {
+                        val bill = repo.getBill(BillRequest(type, company, ref))
+                        result = "${'$'}{bill.customerName}\n${'$'}{bill.amount}\n${'$'}{bill.dueDate}\n${'$'}{bill.billingMonth}"
+                        lastBillLines = listOf(
+                            "Customer: ${'$'}{bill.customerName}",
+                            "Amount: ${'$'}{bill.amount}",
+                            "Due: ${'$'}{bill.dueDate}",
+                            "Month: ${'$'}{bill.billingMonth}",
+                            "Company: ${'$'}company",
+                            "Type: ${'$'}{type.name}",
+                            "Ref: ${'$'}ref"
+                        )
+                    } catch (t: Throwable) {
+                        result = "Failed to fetch. Open GEPCO site below."
+                    }
                 }
             }) { Text("Check Bill") }
+            Button(onClick = {
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                val url = "https://www.gepco.com.pk/GEPCOBill.aspx?RefNo=" + ref
+                ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            }) { Text("Open GEPCO Page") }
             Text(result)
             Button(onClick = {
                 favorites.add("Saved ${type.name}", type.name, company, ref)
