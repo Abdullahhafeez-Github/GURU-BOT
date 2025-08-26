@@ -142,15 +142,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const name = (nameInput.value || "").trim();
     const selector = (selectorInput.value || "").trim();
     if (!name || !selector) return;
-    const exists = targets.some(t => t.name === name);
-    if (exists) {
-      targets = targets.map(t => (t.name === name ? { name, selector } : t));
-    } else {
-      targets = [...targets, { name, selector }];
-    }
-    await saveTargets(targets);
+
+    // Always append; do not replace existing entries
+    const latest = await loadTargets();
+    const next = Array.isArray(latest) ? latest.slice() : [];
+    next.push({ name, selector });
+
+    await saveTargets(next);
     nameInput.value = "";
     selectorInput.value = "";
-    renderTargets(targets);
+    renderTargets(next);
+    targets = next;
   });
 });
