@@ -78,6 +78,7 @@ fun MainScreen() {
     var result by remember { mutableStateOf("") }
     val favorites = remember { FavoritesService() }
     var showSaved by remember { mutableStateOf(false) }
+    var lastBillLines by remember { mutableStateOf<List<String>>(emptyList()) }
     Scaffold(topBar = { TopAppBar(title = { Text("Utility Bills PK") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = ref, onValueChange = { ref = it }, label = { Text("Reference / Consumer ID") }, modifier = Modifier.fillMaxWidth())
@@ -92,6 +93,15 @@ fun MainScreen() {
                 androidx.compose.runtime.LaunchedEffect(ref + company + type.name) {
                     val bill = repo.getBill(BillRequest(type, company, ref))
                     result = "${bill.customerName}\n${bill.amount}\n${bill.dueDate}\n${bill.billingMonth}"
+                    lastBillLines = listOf(
+                        "Customer: ${bill.customerName}",
+                        "Amount: ${bill.amount}",
+                        "Due: ${bill.dueDate}",
+                        "Month: ${bill.billingMonth}",
+                        "Company: $company",
+                        "Type: ${type.name}",
+                        "Ref: $ref"
+                    )
                 }
             }) { Text("Check Bill") }
             Text(result)
@@ -100,6 +110,16 @@ fun MainScreen() {
                 showSaved = true
             }) { Text("Add to Favorites") }
             if (showSaved) Text("Saved! Open Favorites tab to view.")
+            if (lastBillLines.isNotEmpty()) {
+                Button(onClick = {
+                    PdfExporter.exportSimpleBillPdf(
+                        context = androidx.compose.ui.platform.LocalContext.current,
+                        title = "Utility Bill",
+                        lines = lastBillLines,
+                        fileName = "bill-${company}-${ref.takeLast(6)}.pdf"
+                    )
+                }) { Text("Download PDF") }
+            }
         }
     }
 }
