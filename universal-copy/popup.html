@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Universal Copy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 12px; min-width: 320px; max-width: 420px; }
+      h1 { font-size: 16px; margin: 0 0 10px; }
+      label { display: block; font-size: 12px; opacity: .8; margin-top: 6px; }
+      input[type="text"] { width: 100%; padding: 8px; margin-top: 4px; }
+      button { padding: 8px 10px; cursor: pointer; }
+      .row { display: flex; gap: 8px; margin-top: 10px; }
+      ul { list-style: none; padding: 0; margin: 12px 0; max-height: 160px; overflow: auto; }
+      li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px solid #8885; border-radius: 6px; margin-bottom: 6px; }
+      .small { font-size: 12px; padding: 6px 8px; }
+      .name { font-weight: 600; }
+      .selector { opacity: .8; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Universal Copy</h1>
+
+    <label for="target-name">Target name</label>
+    <input id="target-name" type="text" placeholder="e.g. Title" />
+
+    <label for="target-selector">CSS selector</label>
+    <input id="target-selector" type="text" placeholder="e.g. article h1" />
+
+    <div class="row">
+      <button id="save">Save</button>
+    </div>
+
+    <ul id="targets"></ul>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
