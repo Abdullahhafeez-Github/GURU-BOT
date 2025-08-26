@@ -69,19 +69,41 @@ function getNodeVisibleText(element) {
 function createCopyButton(getText) {
 	const btn = document.createElement("button");
 	btn.type = "button";
-	btn.textContent = "Copy";
 	btn.setAttribute("data-universal-copy-button", "1");
+	btn.setAttribute("aria-label", "Copy");
+	btn.title = "Copy";
 	btn.style.marginLeft = "8px";
-	btn.style.padding = "2px 6px";
+	btn.style.padding = "2px";
 	btn.style.fontSize = "12px";
 	btn.style.cursor = "pointer";
+	btn.style.background = "transparent";
+	btn.style.border = "none";
+	btn.style.lineHeight = "0";
+
+	const copyIcon = (
+		'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+		'<path d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>' +
+		"</svg>"
+	);
+	const checkIcon = (
+		'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+		'<path d="M9 16.2l-3.5-3.5L4 14.2 9 19l12-12-1.5-1.5z"/>' +
+		"</svg>"
+	);
+
+	btn.innerHTML = copyIcon;
+
 	btn.addEventListener("click", async e => {
 		e.stopPropagation();
 		try {
 			const text = getText();
 			await navigator.clipboard.writeText(text);
-			btn.textContent = "Copied";
-			setTimeout(() => (btn.textContent = "Copy"), 1200);
+			btn.innerHTML = checkIcon;
+			btn.title = "Copied";
+			setTimeout(() => {
+				btn.innerHTML = copyIcon;
+				btn.title = "Copy";
+			}, 1200);
 		} catch (err) {
 			console.error("Clipboard error", err);
 		}
