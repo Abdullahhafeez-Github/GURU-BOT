@@ -26,6 +26,8 @@ import android.app.Application
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import pk.utility.android.ui.BillData
+import pk.utility.android.ui.BillWebViewScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,7 +73,10 @@ fun SplashScreen() {
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    pendingRef: String? = null,
+    onConsumedPending: () -> Unit = {}
+) {
     val registry = remember { defaultRegistry() }
     val repo = remember { BillRepository(registry) }
     var ref by remember { mutableStateOf("") }
@@ -83,38 +88,38 @@ fun MainScreen() {
     var lastBillLines by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
+    var showWeb by remember { mutableStateOf(false) }
+    var parsed by remember { mutableStateOf<BillData?>(null) }
     Scaffold(topBar = { TopAppBar(title = { Text("Utility Bills PK") }) }) { padding ->
+        if (showWeb) {
+            BillWebViewScreen(reference = ref, onParsed = {
+                parsed = it
+            }, modifier = Modifier.fillMaxSize().padding(padding))
+        } else {
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(value = ref, onValueChange = { ref = it }, label = { Text("Reference / Consumer ID") }, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { type = BillType.Electricity }) { Text("Electricity") }
-                Button(onClick = { type = BillType.Gas }) { Text("Gas") }
-            }
-            OutlinedTextField(value = company, onValueChange = { company = it }, label = { Text("Company (e.g., LESCO)") }, modifier = Modifier.fillMaxWidth())
-            Button(onClick = {
-                scope.launch {
-                    result = "Loading..."
-                    try {
-                        val bill = repo.getBill(BillRequest(type, company, ref))
-                        result = "${bill.customerName}\n${bill.amount}\n${bill.dueDate}\n${bill.billingMonth}"
-                        lastBillLines = listOf(
-                            "Customer: ${bill.customerName}",
-                            "Amount: ${bill.amount}",
-                            "Due: ${bill.dueDate}",
-                            "Month: ${bill.billingMonth}",
-                            "Company: $company",
-                            "Type: ${type.name}",
-                            "Ref: $ref"
-                        )
-                    } catch (t: Throwable) {
-                        result = "Failed to fetch. Open GEPCO site below."
-                    }
+            // If a favorite triggered an open, consume it and launch WebView
+            LaunchedEffect(pendingRef) {
+                if (!pendingRef.isNullOrBlank()) {
+                    ref = pendingRef
+                    onConsumedPending()
+                    showWeb = true
                 }
-            }) { Text("Check Bill") }
-            Button(onClick = {
-                val url = "https://www.gepco.com.pk/GEPCOBill.aspx?RefNo=" + ref
-                ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-            }) { Text("Open GEPCO Page") }
+            }
+            OutlinedTextField(value = ref, onValueChange = { ref = it }, label = { Text("Reference / Consumer ID") }, modifier = Modifier.fillMaxWidth())
+            Button(onClick = { showWeb = true }) { Text("Open GEPCO (Solve CAPTCHA)") }
+            parsed?.let { bill ->
+                result = "${bill.customerName}\n${bill.amount}\n${bill.dueDate}\n${bill.billingMonth}"
+                lastBillLines = listOf(
+                    "Customer: ${bill.customerName}",
+                    "Amount: ${bill.amount}",
+                    "Due: ${bill.dueDate}",
+                    "Month: ${bill.billingMonth}",
+                    "Company: $company",
+                    "Type: ${type.name}",
+                    "Ref: $ref"
+                )
+                showWeb = false
+            }
             Text(result)
             Button(onClick = {
                 favorites.add("Saved ${type.name}", type.name, company, ref)
@@ -123,26 +128,30 @@ fun MainScreen() {
             if (showSaved) Text("Saved! Open Favorites tab to view.")
             if (lastBillLines.isNotEmpty()) {
                 Button(onClick = {
-                    PdfExporter.exportSimpleBillPdf(
+                    val uri = PdfExporter.exportSimpleBillPdf(
                         context = ctx,
                         title = "Utility Bill",
                         lines = lastBillLines,
                         fileName = "bill-${company}-${ref.takeLast(6)}.pdf"
                     )
+                    android.widget.Toast.makeText(ctx, "Bill downloaded successfully", android.widget.Toast.LENGTH_SHORT).show()
                 }) { Text("Download PDF") }
             }
+        }
         }
     }
 }
 
 @Composable
-fun FavoritesScreen() {
+fun FavoritesScreen(onOpenRef: (String) -> Unit) {
     val favorites = remember { FavoritesService() }
-    var items by remember { mutableStateOf(favorites.list()) }
+    val items by remember { mutableStateOf(favorites.list()) }
     Scaffold(topBar = { TopAppBar(title = { Text("Favorites") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items.forEach { fav ->
-                Text("${fav.displayName} • ${fav.companyCode} • ${fav.referenceNumber}")
+                Button(onClick = { onOpenRef(fav.referenceNumber) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("${fav.displayName} • ${fav.companyCode} • ${fav.referenceNumber}")
+                }
             }
         }
     }
@@ -151,14 +160,15 @@ fun FavoritesScreen() {
 @Composable
 fun MainTabs() {
     var tab by remember { mutableStateOf(0) }
+    var pendingRef by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }) { Text("Home", modifier = Modifier.padding(16.dp)) }
             Tab(selected = tab == 1, onClick = { tab = 1 }) { Text("Favorites", modifier = Modifier.padding(16.dp)) }
         }
         when (tab) {
-            0 -> MainScreen()
-            1 -> FavoritesScreen()
+            0 -> MainScreen(pendingRef = pendingRef, onConsumedPending = { pendingRef = null })
+            1 -> FavoritesScreen(onOpenRef = { ref -> pendingRef = ref; tab = 0 })
         }
     }
 }
