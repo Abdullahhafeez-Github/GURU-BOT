@@ -4,14 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,10 +19,16 @@ import pk.utility.shared.models.BillRequest
 import pk.utility.shared.models.BillType
 import pk.utility.shared.providers.defaultRegistry
 import pk.utility.shared.repository.BillRepository
+import pk.utility.shared.favorites.FavoritesService
+import pk.utility.shared.models.FavoriteEntry
+import pk.utility.shared.platform.appContext
+import android.app.Application
+import android.content.Context
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pk.utility.shared.platform.appContext = applicationContext
         setContent {
             App()
         }
@@ -38,7 +42,7 @@ fun App() {
         delay(2000)
         showSplash = false
     }
-    if (showSplash) SplashScreen() else MainScreen()
+    if (showSplash) SplashScreen() else MainTabs()
 }
 
 @Composable
@@ -72,6 +76,8 @@ fun MainScreen() {
     var type by remember { mutableStateOf(BillType.Electricity) }
     var company by remember { mutableStateOf("LESCO") }
     var result by remember { mutableStateOf("") }
+    val favorites = remember { FavoritesService() }
+    var showSaved by remember { mutableStateOf(false) }
     Scaffold(topBar = { TopAppBar(title = { Text("Utility Bills PK") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = ref, onValueChange = { ref = it }, label = { Text("Reference / Consumer ID") }, modifier = Modifier.fillMaxWidth())
@@ -89,6 +95,39 @@ fun MainScreen() {
                 }
             }) { Text("Check Bill") }
             Text(result)
+            Button(onClick = {
+                favorites.add("Saved ${type.name}", type.name, company, ref)
+                showSaved = true
+            }) { Text("Add to Favorites") }
+            if (showSaved) Text("Saved! Open Favorites tab to view.")
+        }
+    }
+}
+
+@Composable
+fun FavoritesScreen() {
+    val favorites = remember { FavoritesService() }
+    var items by remember { mutableStateOf(favorites.list()) }
+    Scaffold(topBar = { TopAppBar(title = { Text("Favorites") }) }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items.forEach { fav ->
+                Text("${fav.displayName} • ${fav.companyCode} • ${fav.referenceNumber}")
+            }
+        }
+    }
+}
+
+@Composable
+fun MainTabs() {
+    var tab by remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = tab) {
+            Tab(selected = tab == 0, onClick = { tab = 0 }) { Text("Home", modifier = Modifier.padding(16.dp)) }
+            Tab(selected = tab == 1, onClick = { tab = 1 }) { Text("Favorites", modifier = Modifier.padding(16.dp)) }
+        }
+        when (tab) {
+            0 -> MainScreen()
+            1 -> FavoritesScreen()
         }
     }
 }
