@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Dark Mode Toggle",
+  "description": "Toggle a readable dark mode on the current page.",
+  "version": "1.0.0",
+  "action": {
+    "default_title": "Dark Mode Toggle",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting"]
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Dark Mode Toggle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        padding: 12px;
+        min-width: 220px;
+      }
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 14px;
+        border-radius: 8px;
+        border: 1px solid #8885;
+        background: #111;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:hover { filter: brightness(1.1); }
+    </style>
+  </head>
+  <body>
+    <button id="toggle">Toggle Dark Mode on this page</button>
+    <script src="popup.js"></script>
+  </body>
+</html>
