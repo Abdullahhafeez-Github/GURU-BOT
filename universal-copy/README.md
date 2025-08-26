@@ -1,22 +1,28 @@
 # Universal Copy Tool (Chrome Extension)
 
-Save CSS selectors, scan any page, and copy all matching text.
+Save named targets (name + CSS selector). The extension injects a small "Copy" button next to each matching element on any page you visit.
 
 ## Install (English)
 
-1. Load the folder as an unpacked extension: Chrome → `chrome://extensions` → Developer mode → Load unpacked → select the `universal-copy` folder.
-2. Pin the extension and open the popup.
-3. Add CSS selectors (e.g., `h1`, `article .price`, `meta[name=description]`).
-4. Click "Scan Current Page" and then "Copy All" or copy individual items.
+1. Chrome → `chrome://extensions` → Enable Developer mode → Load unpacked → select `universal-copy` folder.
+2. Click the extension icon to open popup.
+3. Enter Target name and CSS selector → Save.
+4. Reload/visit any page: a Copy button appears near matching elements.
 
 ## استعمال (اردو)
 
-1. Chrome میں `chrome://extensions` کھولیں → "Developer mode" آن کریں → "Load unpacked" پر کلک کریں → `universal-copy` فولڈر منتخب کریں۔
-2. پاپ اَپ میں مطلوبہ CSS سلیکٹرز شامل کریں۔
-3. "Scan Current Page" دبائیں → نتائج سے "Copy All" یا ہر آئٹم کے ساتھ "Copy" دبائیں۔
+1. Chrome میں `chrome://extensions` کھولیں → "Developer mode" آن کریں → "Load unpacked" → `universal-copy` فولڈر منتخب کریں۔
+2. پاپ اپ میں "Target name" اور "CSS selector" درج کریں اور Save کریں۔
+3. جب آپ کوئی ویب پیج کھولیں گے تو متعلقہ عناصر کے ساتھ "Copy" بٹن خود کار طریقے سے نظر آئے گا۔
 
-## Notes
+## Permissions
 
-- Data is stored with `chrome.storage.sync` when available.
-- The content script only acts when the popup sends a scan message.
-- Permissions: `storage`, `activeTab`, `scripting`, `tabs`, `host_permissions: <all_urls>`.
+- `storage` (to persist your saved targets)
+
+## Files
+
+- `manifest.json` – MV3 config
+- `popup.html` – UI to add/delete targets
+- `popup.js` – stores targets in Chrome storage
+- `content.js` – injects Copy buttons near matching elements automatically
+- `icon.png` – extension icon

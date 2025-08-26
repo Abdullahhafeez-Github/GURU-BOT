@@ -6,44 +6,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       :root { color-scheme: light dark; }
-      body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        margin: 0;
-        padding: 12px;
-        min-width: 320px;
-        max-width: 420px;
-      }
-      h1 { font-size: 16px; margin: 0 0 8px; }
-      .row { display: flex; gap: 8px; margin-bottom: 8px; }
-      input[type="text"] { flex: 1; padding: 8px; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 12px; min-width: 320px; max-width: 420px; }
+      h1 { font-size: 16px; margin: 0 0 10px; }
+      label { display: block; font-size: 12px; opacity: .8; margin-top: 6px; }
+      input[type="text"] { width: 100%; padding: 8px; margin-top: 4px; }
       button { padding: 8px 10px; cursor: pointer; }
-      ul { list-style: none; padding: 0; margin: 8px 0; max-height: 120px; overflow: auto; }
+      .row { display: flex; gap: 8px; margin-top: 10px; }
+      ul { list-style: none; padding: 0; margin: 12px 0; max-height: 160px; overflow: auto; }
       li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px solid #8885; border-radius: 6px; margin-bottom: 6px; }
-      .results { margin-top: 12px; max-height: 220px; overflow: auto; border-top: 1px solid #8885; padding-top: 8px; }
-      .result-item { border: 1px dashed #8885; border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; }
-      .muted { opacity: 0.8; font-size: 12px; }
-      .actions { display: flex; gap: 8px; }
       .small { font-size: 12px; padding: 6px 8px; }
+      .name { font-weight: 600; }
+      .selector { opacity: .8; font-size: 12px; }
     </style>
   </head>
   <body>
     <h1>Universal Copy</h1>
 
+    <label for="target-name">Target name</label>
+    <input id="target-name" type="text" placeholder="e.g. Title" />
+
+    <label for="target-selector">CSS selector</label>
+    <input id="target-selector" type="text" placeholder="e.g. article h1" />
+
     <div class="row">
-      <input id="selector-input" type="text" placeholder="Enter CSS selector e.g. article h1" />
-      <button id="add-selector">Add</button>
+      <button id="save">Save</button>
     </div>
 
-    <ul id="selector-list"></ul>
-
-    <div class="row">
-      <button id="scan">Scan Current Page</button>
-      <button id="copy-all" class="small">Copy All</button>
-    </div>
-
-    <div class="results" id="results"></div>
-
-    <p class="muted">Tips: Use precise selectors. Examples: <code>h1</code>, <code>article .title</code>, <code>meta[name=description]</code>.</p>
+    <ul id="targets"></ul>
 
     <script src="popup.js"></script>
   </body>

@@ -1,14 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Universal Copy Tool",
-  "description": "Save CSS selectors and copy matching content from any webpage.",
+  "description": "Save named CSS selectors and auto-add Copy buttons on pages.",
   "version": "1.0.0",
   "action": {
     "default_title": "Universal Copy",
     "default_popup": "popup.html"
   },
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["storage"],
   "icons": {
     "16": "icon.png",
     "32": "icon.png",

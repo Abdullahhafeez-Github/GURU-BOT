@@ -1,38 +1,62 @@
-const STORAGE_KEY = "universal_copy_selectors";
+const STORAGE_KEY = "universal_copy_targets";
 
-function loadSelectors() {
+function getStorageArea() {
+  // Prefer sync if available, else local
+  return chrome.storage && chrome.storage.sync ? chrome.storage.sync : chrome.storage.local;
+}
+
+function loadTargets() {
+  const storage = getStorageArea();
   return new Promise(resolve => {
-    chrome.storage.sync.get([STORAGE_KEY], data => {
-      const selectors = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
-      resolve(selectors);
+    storage.get([STORAGE_KEY], data => {
+      const targets = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
+      resolve(targets);
     });
   });
 }
 
-function saveSelectors(selectors) {
+function saveTargets(targets) {
+  const storage = getStorageArea();
   return new Promise(resolve => {
-    chrome.storage.sync.set({ [STORAGE_KEY]: selectors }, resolve);
+    storage.set({ [STORAGE_KEY]: targets }, resolve);
   });
 }
 
-function renderSelectors(selectors) {
-  const list = document.getElementById("selector-list");
-  list.innerHTML = "";
-  selectors.forEach((selector, index) => {
+function renderTargets(targets) {
+  const ul = document.getElementById("targets");
+  ul.innerHTML = "";
+  if (!targets.length) {
     const li = document.createElement("li");
-    const text = document.createElement("span");
-    text.textContent = selector;
+    li.textContent = "No targets saved yet.";
+    ul.appendChild(li);
+    return;
+  }
+  targets.forEach((t, index) => {
+    const li = document.createElement("li");
+    const left = document.createElement("div");
+    left.style.display = "flex";
+    left.style.flexDirection = "column";
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = t.name;
+    const selector = document.createElement("span");
+    selector.className = "selector";
+    selector.textContent = t.selector;
+    left.appendChild(name);
+    left.appendChild(selector);
+
     const del = document.createElement("button");
     del.textContent = "Delete";
     del.className = "small";
     del.addEventListener("click", async () => {
-      const updated = selectors.filter((_, i) => i !== index);
-      await saveSelectors(updated);
-      renderSelectors(updated);
+      const updated = targets.filter((_, i) => i !== index);
+      await saveTargets(updated);
+      renderTargets(updated);
     });
-    li.appendChild(text);
+
+    li.appendChild(left);
     li.appendChild(del);
-    list.appendChild(li);
+    ul.appendChild(li);
   });
 }
 
@@ -107,25 +131,26 @@ function renderResults(payload) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const input = document.getElementById("selector-input");
-  const addBtn = document.getElementById("add-selector");
-  const scanBtn = document.getElementById("scan");
+  const nameInput = document.getElementById("target-name");
+  const selectorInput = document.getElementById("target-selector");
+  const saveBtn = document.getElementById("save");
 
-  let selectors = await loadSelectors();
-  renderSelectors(selectors);
+  let targets = await loadTargets();
+  renderTargets(targets);
 
-  addBtn.addEventListener("click", async () => {
-    const value = (input.value || "").trim();
-    if (!value) return;
-    if (!selectors.includes(value)) selectors = [...selectors, value];
-    await saveSelectors(selectors);
-    input.value = "";
-    renderSelectors(selectors);
-  });
-
-  scanBtn.addEventListener("click", async () => {
-    selectors = await loadSelectors();
-    const payload = await scanPage(selectors);
-    renderResults(payload);
+  saveBtn.addEventListener("click", async () => {
+    const name = (nameInput.value || "").trim();
+    const selector = (selectorInput.value || "").trim();
+    if (!name || !selector) return;
+    const exists = targets.some(t => t.name === name);
+    if (exists) {
+      targets = targets.map(t => (t.name === name ? { name, selector } : t));
+    } else {
+      targets = [...targets, { name, selector }];
+    }
+    await saveTargets(targets);
+    nameInput.value = "";
+    selectorInput.value = "";
+    renderTargets(targets);
   });
 });
