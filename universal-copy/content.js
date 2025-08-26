@@ -1,147 +1,151 @@
-function uniqueAndTrimmed(items) {
-  const seen = new Set();
-  const result = [];
-  for (const item of items) {
-    const trimmed = (item || "").replace(/\s+/g, " ").trim();
-    if (trimmed && !seen.has(trimmed)) {
-      seen.add(trimmed);
-      result.push(trimmed);
-    }
-  }
-  return result;
-}
-
-function collectMatchesForSelector(selector) {
-  let matches = [];
-  try {
-    // Special case: meta tags often need content attribute
-    if (selector.startsWith("meta")) {
-      const nodes = Array.from(document.querySelectorAll(selector));
-      matches = nodes.map(node => node.getAttribute("content") || node.getAttribute("value") || node.innerText || node.textContent || "");
-    } else {
-      const nodes = Array.from(document.querySelectorAll(selector));
-      matches = nodes.map(node => node.innerText || node.textContent || "");
-    }
-  } catch (e) {
-    // Invalid selector or access issue
-    matches = [];
-  }
-  return uniqueAndTrimmed(matches);
-}
-
-function scanSelectors(selectors) {
-  const perSelector = [];
-  const allTexts = [];
-  for (const selector of selectors) {
-    const matches = collectMatchesForSelector(selector);
-    perSelector.push({ selector, matches });
-    allTexts.push(...matches);
-  }
-  const combinedText = allTexts.join("\n");
-  return { results: perSelector, combinedText };
-}
-
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || message.type !== "SCAN_SELECTORS") return;
-  const selectors = Array.isArray(message.selectors) ? message.selectors : [];
-  const payload = scanSelectors(selectors);
-  sendResponse(payload);
-  return true;
-});
-
 const STORAGE_KEY = "universal_copy_targets";
 
 function getStorageArea() {
-  return chrome.storage && chrome.storage.sync ? chrome.storage.sync : chrome.storage.local;
+	return chrome.storage && chrome.storage.sync ? chrome.storage.sync : chrome.storage.local;
 }
 
 function loadTargets() {
-  const storage = getStorageArea();
-  return new Promise(resolve => {
-    storage.get([STORAGE_KEY], data => {
-      const targets = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
-      resolve(targets);
-    });
-  });
+	const storage = getStorageArea();
+	return new Promise(resolve => {
+		storage.get([STORAGE_KEY], data => {
+			const targets = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
+			resolve(targets);
+		});
+	});
+}
+
+function getTargetKey(target) {
+	return `${target.name || ""}::${target.selector || ""}`;
+}
+
+// Track which targets have been injected for which elements in this page session
+const injectedForElement = new WeakMap(); // Element -> Set<string(targetKey)>
+
+function hasInjectedFor(element, targetKey) {
+	const set = injectedForElement.get(element);
+	return !!(set && set.has(targetKey));
+}
+
+function setInjectedFor(element, targetKey) {
+	let set = injectedForElement.get(element);
+	if (!set) {
+		set = new Set();
+		injectedForElement.set(element, set);
+	}
+	set.add(targetKey);
+}
+
+function getNodeVisibleText(element) {
+	if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+		return (element.value || "").replace(/\s+/g, " ").trim();
+	}
+	// Collect text nodes under element, ignoring any of our injected holders if nested
+	const walker = document.createTreeWalker(
+		element,
+		NodeFilter.SHOW_TEXT,
+		{
+			acceptNode: node => {
+				const parent = node.parentNode;
+				if (parent && parent.nodeType === 1) {
+					const el = parent;
+					if (el.getAttribute && el.getAttribute("data-universal-copy-holder") === "1") {
+						return NodeFilter.FILTER_REJECT;
+					}
+				}
+				return NodeFilter.FILTER_ACCEPT;
+			}
+		},
+		false
+	);
+	let buffer = "";
+	let current;
+	// eslint-disable-next-line no-cond-assign
+	while ((current = walker.nextNode())) {
+		buffer += current.nodeValue + " ";
+	}
+	return buffer.replace(/\s+/g, " ").trim();
 }
 
 function createCopyButton(getText) {
-  const btn = document.createElement("button");
-  btn.textContent = "Copy";
-  btn.style.marginLeft = "8px";
-  btn.style.padding = "2px 6px";
-  btn.style.fontSize = "12px";
-  btn.style.cursor = "pointer";
-  btn.addEventListener("click", async e => {
-    e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(getText());
-      btn.textContent = "Copied";
-      setTimeout(() => (btn.textContent = "Copy"), 1200);
-    } catch (err) {
-      console.error("Clipboard error", err);
-    }
-  });
-  return btn;
-}
-
-function markInjected(element) {
-  element.setAttribute("data-universal-copy-injected", "1");
-}
-
-function isInjected(element) {
-  return element.getAttribute("data-universal-copy-injected") === "1";
-}
-
-function getNodeText(node) {
-  return (node && (node.innerText || node.textContent || "").replace(/\s+/g, " ").trim()) || "";
+	const btn = document.createElement("button");
+	btn.type = "button";
+	btn.textContent = "Copy";
+	btn.setAttribute("data-universal-copy-button", "1");
+	btn.style.marginLeft = "8px";
+	btn.style.padding = "2px 6px";
+	btn.style.fontSize = "12px";
+	btn.style.cursor = "pointer";
+	btn.addEventListener("click", async e => {
+		e.stopPropagation();
+		try {
+			const text = getText();
+			await navigator.clipboard.writeText(text);
+			btn.textContent = "Copied";
+			setTimeout(() => (btn.textContent = "Copy"), 1200);
+		} catch (err) {
+			console.error("Clipboard error", err);
+		}
+	});
+	return btn;
 }
 
 function injectForTarget(target) {
-  let nodes = [];
-  try {
-    nodes = Array.from(document.querySelectorAll(target.selector));
-  } catch (e) {
-    return;
-  }
-  for (const node of nodes) {
-    if (!node || isInjected(node)) continue;
-    const text = getNodeText(node);
-    const btn = createCopyButton(() => getNodeText(node));
-    // Try to append near the node without breaking layout
-    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
-      const wrapper = document.createElement("span");
-      wrapper.style.display = "inline-flex";
-      wrapper.style.alignItems = "center";
-      node.insertAdjacentElement("afterend", wrapper);
-      wrapper.appendChild(btn);
-    } else {
-      const container = node.closest("h1,h2,h3,h4,h5,h6,p,li,dt,dd,blockquote,th,td,caption,figcaption,header,footer,summary") || node;
-      const holder = document.createElement("span");
-      holder.style.display = "inline-flex";
-      holder.style.alignItems = "center";
-      holder.style.marginLeft = "6px";
-      holder.appendChild(btn);
-      container.appendChild(holder);
-    }
-    markInjected(node);
-  }
+	const selector = target && target.selector;
+	if (!selector) return;
+	const targetKey = getTargetKey(target);
+	let nodes = [];
+	try {
+		nodes = Array.from(document.querySelectorAll(selector));
+	} catch (_) {
+		return; // invalid selector
+	}
+	for (const node of nodes) {
+		if (!node) continue;
+		if (hasInjectedFor(node, targetKey)) continue;
+		// Create holder as a sibling so its label never becomes part of the node's text
+		const holder = document.createElement("span");
+		holder.setAttribute("data-universal-copy-holder", "1");
+		holder.setAttribute("data-target-key", targetKey);
+		holder.style.display = "inline-flex";
+		holder.style.alignItems = "center";
+		holder.style.marginLeft = "6px";
+		const btn = createCopyButton(() => getNodeVisibleText(node));
+		holder.appendChild(btn);
+		// Place button right after the matched node
+		node.insertAdjacentElement("afterend", holder);
+		setInjectedFor(node, targetKey);
+	}
 }
 
 async function runInjection() {
-  const targets = await loadTargets();
-  targets.forEach(injectForTarget);
+	const targets = await loadTargets();
+	for (const t of targets) injectForTarget(t);
 }
 
-// Initial run
+// Debounced re-injection on DOM changes
+let scheduled = false;
+function scheduleInjection() {
+	if (scheduled) return;
+	scheduled = true;
+	setTimeout(() => {
+		scheduled = false;
+		runInjection();
+	}, 200);
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", runInjection);
+	document.addEventListener("DOMContentLoaded", runInjection);
 } else {
-  runInjection();
+	runInjection();
 }
 
-// Observe future DOM changes
-const observer = new MutationObserver(() => {
-  runInjection();
-});
+const observer = new MutationObserver(scheduleInjection);
 observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
+// Re-run when storage changes (targets added/removed)
+if (chrome.storage && chrome.storage.onChanged) {
+	chrome.storage.onChanged.addListener((changes, area) => {
+		if (area !== (getStorageArea() === chrome.storage.sync ? "sync" : "local")) return;
+		if (changes[STORAGE_KEY]) scheduleInjection();
+	});
+}
