@@ -24,6 +24,8 @@ import pk.utility.shared.models.FavoriteEntry
 import pk.utility.shared.platform.appContext
 import android.app.Application
 import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +81,8 @@ fun MainScreen() {
     val favorites = remember { FavoritesService() }
     var showSaved by remember { mutableStateOf(false) }
     var lastBillLines by remember { mutableStateOf<List<String>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
     Scaffold(topBar = { TopAppBar(title = { Text("Utility Bills PK") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(value = ref, onValueChange = { ref = it }, label = { Text("Reference / Consumer ID") }, modifier = Modifier.fillMaxWidth())
@@ -87,21 +91,20 @@ fun MainScreen() {
                 Button(onClick = { type = BillType.Gas }) { Text("Gas") }
             }
             OutlinedTextField(value = company, onValueChange = { company = it }, label = { Text("Company (e.g., LESCO)") }, modifier = Modifier.fillMaxWidth())
-            val scope = rememberCoroutineScope()
             Button(onClick = {
                 scope.launch {
                     result = "Loading..."
                     try {
                         val bill = repo.getBill(BillRequest(type, company, ref))
-                        result = "${'$'}{bill.customerName}\n${'$'}{bill.amount}\n${'$'}{bill.dueDate}\n${'$'}{bill.billingMonth}"
+                        result = "${bill.customerName}\n${bill.amount}\n${bill.dueDate}\n${bill.billingMonth}"
                         lastBillLines = listOf(
-                            "Customer: ${'$'}{bill.customerName}",
-                            "Amount: ${'$'}{bill.amount}",
-                            "Due: ${'$'}{bill.dueDate}",
-                            "Month: ${'$'}{bill.billingMonth}",
-                            "Company: ${'$'}company",
-                            "Type: ${'$'}{type.name}",
-                            "Ref: ${'$'}ref"
+                            "Customer: ${bill.customerName}",
+                            "Amount: ${bill.amount}",
+                            "Due: ${bill.dueDate}",
+                            "Month: ${bill.billingMonth}",
+                            "Company: $company",
+                            "Type: ${type.name}",
+                            "Ref: $ref"
                         )
                     } catch (t: Throwable) {
                         result = "Failed to fetch. Open GEPCO site below."
@@ -109,7 +112,6 @@ fun MainScreen() {
                 }
             }) { Text("Check Bill") }
             Button(onClick = {
-                val ctx = androidx.compose.ui.platform.LocalContext.current
                 val url = "https://www.gepco.com.pk/GEPCOBill.aspx?RefNo=" + ref
                 ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
             }) { Text("Open GEPCO Page") }
@@ -122,7 +124,7 @@ fun MainScreen() {
             if (lastBillLines.isNotEmpty()) {
                 Button(onClick = {
                     PdfExporter.exportSimpleBillPdf(
-                        context = androidx.compose.ui.platform.LocalContext.current,
+                        context = ctx,
                         title = "Utility Bill",
                         lines = lastBillLines,
                         fileName = "bill-${company}-${ref.takeLast(6)}.pdf"

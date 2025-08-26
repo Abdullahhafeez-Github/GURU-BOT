@@ -5,7 +5,14 @@ plugins {
 }
 
 kotlin {
-    androidTarget()
+    jvmToolchain(17)
+    androidTarget() {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
     iosArm64()
     iosX64()
     iosSimulatorArm64()
